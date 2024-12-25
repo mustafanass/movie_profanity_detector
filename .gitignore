@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.project
+.pydevproject
+.settings
+
+# Project specific
+upload_folder/
+*.db
+*.sqlite3
+movie_database.db
+
+# Logs
+*.log
+logs/
+
+# Google Cloud credentials
+*.json
+google_credentials.json
+
+# Media files
+*.mp4
+*.wav
+*.srt
+*.mp3
+
+# Docker
+.docker/
+
+# System
+.DS_Store
+Thumbs.db
