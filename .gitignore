@@ -49,9 +49,6 @@ google_credentials.json
 *.srt
 *.mp3
 
-# Docker
-.docker/
-
 # System
 .DS_Store
 Thumbs.db
