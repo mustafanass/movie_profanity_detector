@@ -33,9 +33,9 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 ```
 
-2. Install dependencies:
+2. Install dependencies in (requirements.txt) file :
 ```bash
-pip install fastapi uvicorn sqlalchemy pysrt ffmpeg-python
+pip install -r requirements.txt 
 ```
 
 3. Configure environment variables in `.env`:
