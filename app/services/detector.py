@@ -21,6 +21,7 @@ from typing import List, Dict, Any
 import ffmpeg
 import random
 import os
+import asyncio
 from app.core.config import get_settings
 
 # Initialize settings for the application
@@ -28,10 +29,16 @@ settings = get_settings()
 
 # Service class for handling detection and audio extraction operations
 """
- -(check_srt) Check SRT file for profanity words
- -(extract_audio_segments) Extract audio segments from video based on detected words
+ -(check_srt) Check SRT file for profanity words .
+ -(check_srt_async) Use (check_srt) as asynchronous method .
+ -(extract_audio_segments) Extract audio segments from video based on detected words .
+ -(extract_audio_segments_async) Use (extract_audio_segments) as asynchronous method .
 """
 class DetectorService:
+    @staticmethod
+    async def check_srt_async(srt_path: str, words_list: List[str]) -> List[Dict[str, Any]]:
+        return await asyncio.to_thread(DetectorService.check_srt, srt_path, words_list)
+                
     @staticmethod
     def check_srt(srt_path: str, words_list: List[str]) -> List[Dict[str, Any]]:
         detected_words = []
@@ -43,60 +50,70 @@ class DetectorService:
                 if word.lower() in line.text.lower(): 
                     detected_words.append({
                         "word": word,
+                        # Replace the (",") with (".") because ffmpeg does not support (,)
                         "start_time": str(line.start).replace(",", "."),
                         "stop_time": str(line.end).replace(",", "."),
                         "context": line.text
                     })
         
         return detected_words
-    
+        
+    @staticmethod
+    async def extract_audio_segment_async(video_path: str, detection: Dict[str, Any], movie_name: str) -> str:
+        # Generate a unique file name as before
+        create_number = random.randint(1, 1001)
+        output_file = os.path.join(
+            settings.SOUND_OUTPUT_DIR,
+            f"{movie_name}-{create_number}.wav"
+        )
+
+        # Prepare the FFmpeg command
+        command = [
+            "ffmpeg",
+            "-ss", detection["start_time"],
+            "-i", video_path,
+            "-t", detection["stop_time"],
+            "-acodec", "libmp3lame",
+            "-b:a", "320k",
+            output_file,
+            "-y"  # Overwrite output file if it exists
+        ]
+
+        # Launch the FFmpeg process asynchronously
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout, stderr = await process.communicate()
+
+        if process.returncode != 0:
+            error_message = stderr.decode().strip()
+            raise Exception(f"FFmpeg error: {error_message}")
+
+        return output_file
 
     @staticmethod
-    async def extract_audio_segments(
-        video_path: str,
-        detections: List[Dict[str, Any]],
-        movie_name: str
-    ) -> List[Dict[str, Any]]:
+    async def extract_audio_segments(video_path: str, detections: List[Dict[str, Any]], movie_name: str) -> List[Dict[str, Any]]:
+        # Create a list of tasks using the asynchronous extraction method
+        tasks = [
+            DetectorService.extract_audio_segment_async(video_path, detection, movie_name)
+            for detection in detections
+        ]
+
+        # Run all tasks concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
         audio_segments = []
-        gen_number_set = set()
-        
-        for detection in detections:
-            try:
-                # Generate random unique number for the audio file name
-                create_number = random.randint(1, 1001) 
-                # Ensure Generated number is unique
-                while create_number in gen_number_set:
-                    create_number = random.randint(1, 1001)
-                gen_number_set.add(create_number)
-                
-                # Create the output file path for the audio segment
-                output_file = os.path.join(
-                    settings.SOUND_OUTPUT_DIR,
-                    f"{movie_name}-{create_number}.wav"
-                )
-                
-                # Extract the audio segment using ffmpeg
-                video_input = ffmpeg.input(
-                    video_path,
-                    ss=detection["start_time"],
-                    t=detection["stop_time"]
-                )
-                output_stream = ffmpeg.output(
-                    video_input,
-                    output_file,
-                    codec='libmp3lame',
-                    bitrate='320k'
-                )
-                ffmpeg.run(output_stream)
-                
-                # Append the detection and audio path to the list
+        for detection, result in zip(detections, results):
+            if isinstance(result, Exception):
+                print(f"Error extracting audio segment for detection {detection}: {result}")
+            else:
                 audio_segments.append({
                     **detection,
-                    "audio_path": output_file
+                    "audio_path": result
                 })
-            # Handle ffmpeg errors
-            except ffmpeg.Error as e:
-                print(f"Error extracting audio segment: {str(e)}")
-                continue
-        
+
         return audio_segments
+
