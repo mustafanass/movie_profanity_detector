@@ -15,10 +15,8 @@
 # along with Movie Profanity Detector. If not, see <http://www.gnu.org/licenses/>.
 
 # Import necessary modules and dependencies
-from pathlib import Path
 import pysrt
 from typing import List, Dict, Any
-import ffmpeg
 import random
 import os
 import asyncio
@@ -62,10 +60,7 @@ class DetectorService:
     async def extract_audio_segment_async(video_path: str, detection: Dict[str, Any], movie_name: str) -> str:
         # Generate a unique file name as before
         create_number = random.randint(1, 1001)
-        output_file = os.path.join(
-            settings.SOUND_OUTPUT_DIR,
-            f"{movie_name}-{create_number}.wav"
-        )
+        output_file = os.path.join(settings.SOUND_OUTPUT_DIR, f"{movie_name}-{create_number}.wav")
 
         # Prepare the FFmpeg command
         command = [
@@ -80,11 +75,7 @@ class DetectorService:
         ]
 
         # Launch the FFmpeg process asynchronously
-        process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
+        process = await asyncio.create_subprocess_exec(*command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE )
 
         stdout, stderr = await process.communicate()
 
