@@ -152,6 +152,18 @@ Mock implementation of speech-to-text service:
 - Mock confidence scores
 - Batch processing capabilities
 
+## Asynchronous Processing
+
+The application is updated to fully support asynchronous operations to handle I/O-bound tasks efficiently:
+
+- **SRT File Analysis:**  
+  The SRT file is parsed asynchronously using `DetectorService.check_srt_async`, which offloads the file reading and processing to a separate thread via `asyncio.to_thread`.
+
+- **Audio Extraction:**  
+  Audio segments are extracted asynchronously using FFmpeg. The `DetectorService.extract_audio_segments` method creates concurrent tasks (using `asyncio.gather`) to run FFmpeg as an asynchronous subprocess. This design ensures that multiple audio extractions can occur in parallel without blocking the main API thread.
+
+These design choices contribute to the scalability and responsiveness of the API.
+
 ## Notes
 - The speech service is currently in mock mode for development
 - File uploads are limited to specified extensions
